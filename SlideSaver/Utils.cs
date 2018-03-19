@@ -11,6 +11,9 @@ using System.Threading.Tasks;
 
 namespace SlideSaver
 {
+    /// <summary>
+    /// Static class for application-wide methods
+    /// </summary>
     public static class Utils
     {
         public static void SaveConfig(Config config)
