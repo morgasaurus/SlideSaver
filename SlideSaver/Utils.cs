@@ -67,7 +67,7 @@ namespace SlideSaver
                 IncludeSubdirectories = true,
             };
         }
-
+        
         [DllImport("user32.dll")]
         public static extern IntPtr SetParent(IntPtr hWndChild, IntPtr hWndNewParent);
 
@@ -79,5 +79,15 @@ namespace SlideSaver
 
         [DllImport("user32.dll")]
         public static extern bool GetClientRect(IntPtr hWnd, out Rectangle lpRect);
+
+        [DllImport("shcore.dll")]
+        public static extern int SetProcessDpiAwareness(ProcessDPIAwareness value);
+    }
+
+    public enum ProcessDPIAwareness
+    {
+        ProcessDPIUnaware = 0,
+        ProcessSystemDPIAware = 1,
+        ProcessPerMonitorDPIAware = 2,
     }
 }

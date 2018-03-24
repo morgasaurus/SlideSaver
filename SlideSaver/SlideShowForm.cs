@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -19,43 +20,35 @@ namespace SlideSaver
         /// <summary>
         /// Creates a new SlideShowForm instance and initializes the designer elements
         /// </summary>
-        public SlideShowForm()
+        public SlideShowForm(ImageQueue queue)
         {
             InitializeComponent();
+            Queue = queue;
+            KeyPreview = true;
         }
 
         #region Props
-        /// <summary>
-        /// Gets or sets the base path used to find photos for the slideshow
-        /// </summary>
-        public string BasePath { get; set; }
-
-        /// <summary>
-        /// Gets or sets a flag indicating whether to include subdirectories of the base path for pictures
-        /// </summary>
-        public bool IncludeSubdirectories { get; set; }
-
-        /// <summary>
-        /// Gets or sets the sequence mode of the slide show
-        /// </summary>
-        public SequenceMode SequenceMode { get; set; }
-
-        /// <summary>
-        /// Paths to the photos to display
-        /// </summary>
-        private List<string> PhotoPaths;
-
+        private ImageQueue Queue;
+        private Point MouseLocation;
+        
         /// <summary>
         /// Gets or sets a flag indicating we are in preview mode
         /// </summary>
-        public bool PreviewMode = true;
+        public bool PreviewMode = false;
         #endregion Props
 
         #region EventHandlers
         private void SlideShowForm_Load(object sender, EventArgs e)
         {
-            Cursor.Hide();
-            TopMost = true;
+            if (!PreviewMode)
+            {
+                Cursor.Hide();
+                TopMost = true;
+            }
+        }
+        
+        private void SlideShowForm_Shown(object sender, EventArgs e)
+        {
         }
 
         private void SlideShowForm_Click(object sender, EventArgs e)
@@ -72,7 +65,74 @@ namespace SlideSaver
         {
             Quit();
         }
+
+        private void SlideShowForm_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!MouseLocation.IsEmpty)
+            {
+                if (Math.Abs(MouseLocation.X - e.X) > 5 || Math.Abs(MouseLocation.Y - e.Y) > 5)
+                {
+                    Quit();
+                }
+            }
+            MouseLocation = e.Location;
+        }
+
+        private void SlideShowForm_Paint(object sender, PaintEventArgs e)
+        {
+            Image image = Queue.Dequeue();
+            if (image == null)
+            {
+                return;
+            }
+            ClearScreen(e.Graphics);
+
+            // If the width and height of the image match the bounds go ahead and draw
+            if (Bounds.Width == image.Width && Bounds.Height == image.Height)
+            {
+                e.Graphics.DrawImage(image, new Point(0, 0));
+                return;
+            }
+
+            // Otherwise we need to scale; let's find out how
+            double screenRatio = (double)Bounds.Width / (double)Bounds.Height;
+            double imageRatio = (double)image.Width / (double)image.Height;
+
+            // Set some scaling modes
+            e.Graphics.CompositingMode = CompositingMode.SourceCopy;
+            e.Graphics.CompositingQuality = CompositingQuality.HighQuality;
+            e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            e.Graphics.SmoothingMode = SmoothingMode.HighQuality;
+            e.Graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+            if (screenRatio < imageRatio)
+            {
+                // Scale by X
+                double scale = (double)Bounds.Width / (double)image.Width;
+                int width = Bounds.Width;
+                int height = (int)((double)image.Height * scale);
+                int y = (Bounds.Height - height) / 2;
+                Rectangle rect = new Rectangle(0, y, width, height);
+                e.Graphics.DrawImage(image, rect);                
+            }
+            else
+            {
+                // Scale by Y
+                double scale = (double)Bounds.Height / (double)image.Height;
+                int height = Bounds.Height;
+                int width = (int)((double)image.Width * scale);
+                int x = (Bounds.Width - width) / 2;
+                Rectangle rect = new Rectangle(x, 0, width, height);
+                e.Graphics.DrawImage(image, rect);
+            }
+        }
         #endregion EventHandlers
+        
+        private void ClearScreen(Graphics g)
+        {
+            g.DrawRectangle(new Pen(Color.Black), Bounds);
+            g.FillRectangle(new SolidBrush(Color.Black), Bounds);
+        }
 
         /// <summary>
         /// Sets the parent of this window in case the screen saver is started in preview mode
@@ -103,7 +163,7 @@ namespace SlideSaver
         {
             if (!PreviewMode)
             {
-                Application.Exit();
+                Close();
             }
         }
     }

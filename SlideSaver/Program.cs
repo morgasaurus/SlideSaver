@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -8,16 +9,21 @@ namespace SlideSaver
 {
     static class Program
     {
+        private static bool Running = false;
+
         /// <summary>
         /// The main entry point for the application.
         /// </summary>
         [STAThread]
         static void Main(string[] args)
         {
-            // No arguments means run configuration
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            // No arguments means run full screen
             if (args.Length == 0)
             {
-                Configuration();
+                FullScreen();
                 return;
             }
 
@@ -41,6 +47,9 @@ namespace SlideSaver
 
             switch (arg1)
             {
+                case "/c":
+                    Configuration();
+                    return;
                 case "/p":
                     long handle;
                     if (long.TryParse(arg2, out handle))
@@ -52,7 +61,7 @@ namespace SlideSaver
                     FullScreen();
                     return;
                 default:
-                    Configuration();
+                    FullScreen();
                     return;
             }
         }
@@ -64,20 +73,66 @@ namespace SlideSaver
 
         static void Preview(IntPtr handle)
         {
-            SlideShowForm form = new SlideShowForm();
+            ImageQueue queue = GetQueue();
+            SlideShowForm form = new SlideShowForm(queue);
             form.SetPreviewMode(handle);
-            Application.Run(form);
+            RunForms(new List<Form>() { form });
         }
 
         static void FullScreen()
         {
-            foreach(Screen screen in Screen.AllScreens)
+            ImageQueue queue = GetQueue();
+            List<Form> forms = new List<Form>();
+            foreach (Screen screen in Screen.AllScreens)
             {
-                SlideShowForm form = new SlideShowForm();
+                SlideShowForm form = new SlideShowForm(queue);
+                forms.Add(form);
                 form.Bounds = screen.Bounds;
-                form.Show();
             }
-            Application.Run();
+
+            RunForms(forms);
+        }
+
+        private static void RunForms(List<Form> forms)
+        {
+            foreach(Form form in forms)
+            {
+                form.FormClosing += OnFormClosing;
+            }
+
+            Running = true;
+            DateTime lastDraw = DateTime.Now.Subtract(new TimeSpan(0, 0, 0, 3));
+            while (Running)
+            {
+                if (DateTime.Now.Subtract(lastDraw).TotalSeconds >= 5)
+                {
+                    lastDraw = DateTime.Now;
+                    foreach (Form form in forms)
+                    {
+                        form.Show();
+                        form.Refresh();
+                    }
+                }
+                Thread.Sleep(10);
+                Application.DoEvents();
+            }
+
+            foreach (Form form in forms)
+            {
+                form.Close();
+            }
+        }
+
+        private static void OnFormClosing(object sender, FormClosingEventArgs e)
+        {
+            Running = false;
+        }
+
+        static ImageQueue GetQueue()
+        {
+            Config config = Utils.LoadConfig();
+            ImageQueue queue = new ImageQueue(config.BasePath, config.IncludeSubdirectories, config.SequenceMode, 10);
+            return queue;
         }
     }
 }

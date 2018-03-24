@@ -34,13 +34,20 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.BackColor = System.Drawing.Color.Black;
             this.ClientSize = new System.Drawing.Size(284, 261);
+            this.DoubleBuffered = true;
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
             this.Name = "SlideShowForm";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
             this.Text = "SlideShowForm";
             this.Load += new System.EventHandler(this.SlideShowForm_Load);
+            this.Shown += new System.EventHandler(this.SlideShowForm_Shown);
             this.Click += new System.EventHandler(this.SlideShowForm_Click);
+            this.Paint += new System.Windows.Forms.PaintEventHandler(this.SlideShowForm_Paint);
             this.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.SlideShowForm_KeyPress);
             this.MouseClick += new System.Windows.Forms.MouseEventHandler(this.SlideShowForm_MouseClick);
+            this.MouseMove += new System.Windows.Forms.MouseEventHandler(this.SlideShowForm_MouseMove);
             this.ResumeLayout(false);
 
         }
