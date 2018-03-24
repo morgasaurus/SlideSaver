@@ -14,11 +14,12 @@ namespace SlideSaver
 {
     /// <summary>
     /// Represents a form used to show a slide show on a single monitor
+    /// <para>To advance to the next photo invoke Refresh from the thread creating this instance</para>
     /// </summary>
     public partial class SlideShowForm : Form
     {
         /// <summary>
-        /// Creates a new SlideShowForm instance and initializes the designer elements
+        /// Creates a new SlideShowForm instance which will pull from the specified image queue
         /// </summary>
         public SlideShowForm(ImageQueue queue)
         {
@@ -29,12 +30,8 @@ namespace SlideSaver
 
         #region Props
         private ImageQueue Queue;
-        private Point MouseLocation;
-        
-        /// <summary>
-        /// Gets or sets a flag indicating we are in preview mode
-        /// </summary>
-        public bool PreviewMode = false;
+        private Point MouseLocation;        
+        private bool PreviewMode = false;
         #endregion Props
 
         #region EventHandlers
@@ -45,10 +42,6 @@ namespace SlideSaver
                 Cursor.Hide();
                 TopMost = true;
             }
-        }
-        
-        private void SlideShowForm_Shown(object sender, EventArgs e)
-        {
         }
 
         private void SlideShowForm_Click(object sender, EventArgs e)
@@ -81,12 +74,25 @@ namespace SlideSaver
         private void SlideShowForm_Paint(object sender, PaintEventArgs e)
         {
             Image image = Queue.Dequeue();
-            if (image == null)
-            {
-                return;
-            }
             ClearScreen(e.Graphics);
 
+            // If the queue provided no image display error text
+            if (image == null)
+            {
+                string message = "Failed to load images.\r\nMaybe the folder contains no image files?\r\nCheck SlideSaver settings.";
+
+                Font font = new Font("Arial", 32);
+                SolidBrush brush = new SolidBrush(Color.Red);
+                StringFormat format = new StringFormat();
+                format.Alignment = StringAlignment.Center;
+                format.LineAlignment = StringAlignment.Center;
+
+                Rectangle rect = new Rectangle(0, 0, Bounds.Width, Bounds.Height);
+
+                e.Graphics.DrawString(message, font, brush, rect, format);
+                return;
+            }
+            
             // If the width and height of the image match the bounds go ahead and draw
             if (Bounds.Width == image.Width && Bounds.Height == image.Height)
             {

@@ -42,7 +42,6 @@
             this.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
             this.Text = "SlideShowForm";
             this.Load += new System.EventHandler(this.SlideShowForm_Load);
-            this.Shown += new System.EventHandler(this.SlideShowForm_Shown);
             this.Click += new System.EventHandler(this.SlideShowForm_Click);
             this.Paint += new System.Windows.Forms.PaintEventHandler(this.SlideShowForm_Paint);
             this.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.SlideShowForm_KeyPress);

@@ -4,14 +4,12 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace SlideSaver
 {
     /// <summary>
-    /// Represents a class that reads images in the background and queues them up in memory
+    /// Represents a class that reads images in the background and queues them up in memory for thread safe pulling
     /// </summary>
     public class ImageQueue : IDisposable
     {
@@ -29,7 +27,7 @@ namespace SlideSaver
             SequenceMode = sequenceMode;
             Limit = limit;
             LoadImageFiles();
-            EnqueueTimer = new Timer(QueueNextCallback, null, 50, 100);
+            EnqueueTimer = new Timer(QueueNextCallback, null, 0, 100);
         }
 
         private static readonly string[] ImageExtensions = { "png", "jpg", "jpeg", "gif", "bmp", "tif", "tiff" };
@@ -87,6 +85,11 @@ namespace SlideSaver
 
         private Image GetNextImage()
         {
+            if (ImageFiles.Count == 0)
+            {
+                return null;
+            }
+
             // For random we don't even need to concern ourselves with the index
             if (SequenceMode == SequenceMode.Random)
             {
@@ -137,6 +140,22 @@ namespace SlideSaver
             }
         }
 
+        /// <summary>
+        /// Forces n images to be queued up and ready to pull
+        /// </summary>
+        /// <param name="n">The number of images</param>
+        public void ForceEnqueue(int n)
+        {
+            for(int i = 0; i < n; i++)
+            {
+                QueueNextCallback(null);
+            }
+        }
+
+        /// <summary>
+        /// Dequeues and returns the next image in the queue
+        /// </summary>
+        /// <returns>The next image</returns>
         public Image Dequeue()
         {
             ThrowIfDisposed();

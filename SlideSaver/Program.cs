@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace SlideSaver
@@ -73,14 +72,18 @@ namespace SlideSaver
 
         static void Preview(IntPtr handle)
         {
+            // For preview mode we need to set a single form using the handle of the parent window making the call
             ImageQueue queue = GetQueue();
             SlideShowForm form = new SlideShowForm(queue);
             form.SetPreviewMode(handle);
-            RunForms(new List<Form>() { form });
+
+            queue.ForceEnqueue(1);
+            RunSlideShow(new List<Form>() { form });
         }
 
         static void FullScreen()
         {
+            // For full screen we need to init a form for each screen; all forms can read from a single queue
             ImageQueue queue = GetQueue();
             List<Form> forms = new List<Form>();
             foreach (Screen screen in Screen.AllScreens)
@@ -90,18 +93,26 @@ namespace SlideSaver
                 form.Bounds = screen.Bounds;
             }
 
-            RunForms(forms);
+            queue.ForceEnqueue(Screen.AllScreens.Count());
+            RunSlideShow(forms);
         }
 
-        private static void RunForms(List<Form> forms)
+        /// <summary>
+        /// Runs the slide show in a program loop by invoking Refresh and triggering Paint on all of the following forms
+        /// <para>Triggers an event every 5 seconds with a 3 second start delay</para>
+        /// </summary>
+        /// <param name="forms">The forms to paint</param>
+        private static void RunSlideShow(List<Form> forms)
         {
+            // Hook into the form closing event of all forms since that will be our cue to terminate
             foreach(Form form in forms)
             {
                 form.FormClosing += OnFormClosing;
             }
 
+            // The Running flag is set to false by the OnFormClosing event handler
             Running = true;
-            DateTime lastDraw = DateTime.Now.Subtract(new TimeSpan(0, 0, 0, 3));
+            DateTime lastDraw = DateTime.MinValue;
             while (Running)
             {
                 if (DateTime.Now.Subtract(lastDraw).TotalSeconds >= 5)
@@ -109,14 +120,16 @@ namespace SlideSaver
                     lastDraw = DateTime.Now;
                     foreach (Form form in forms)
                     {
+                        // This is a hack but works; Refresh actually forces the forms to queue up their respective Paint events
                         form.Show();
                         form.Refresh();
                     }
                 }
                 Thread.Sleep(10);
-                Application.DoEvents();
+                Application.DoEvents(); // Evil! :)
             }
 
+            // We do not know which form triggered the Close event; we need to close them all before the application terminates
             foreach (Form form in forms)
             {
                 form.Close();
@@ -130,6 +143,7 @@ namespace SlideSaver
 
         static ImageQueue GetQueue()
         {
+            // Read SlideSaver config from the registry and init the ImageQueue for the slide show
             Config config = Utils.LoadConfig();
             ImageQueue queue = new ImageQueue(config.BasePath, config.IncludeSubdirectories, config.SequenceMode, 10);
             return queue;
